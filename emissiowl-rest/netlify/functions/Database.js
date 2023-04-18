@@ -64,6 +64,14 @@ async function querySiteName(db,siteName)
     data = JSON.parse(data);
     return data;
 }
+async function sitesByState(db)
+{
+    let result = db.any('SELECT "State","SiteName" FROM pollutionsite ORDER BY "State"')
+    let data = await result.then(data => data);
+    data = JSON.stringify(data);
+    data = JSON.parse(data);
+    return data;
+}
 
 function requestHeaders()
 {
@@ -85,4 +93,4 @@ async function responseDetails(message)
     }
 }
 
-module.exports = {getStates,getCities,getSiteNames,queryCity,querySiteName,queryState,queryCityAndState,requestHeaders,responseDetails}
+module.exports = {sitesByState,getStates,getCities,getSiteNames,queryCity,querySiteName,queryState,queryCityAndState,requestHeaders,responseDetails}
