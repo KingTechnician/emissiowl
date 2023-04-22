@@ -1,7 +1,7 @@
 import logo from './logo.svg';
 import './App.css';
 import React from 'react';
-import {Tabs, Chip, Tab,Box,Typography,Toolbar,Tooltip,TextField} from '@mui/material/';
+import {Tabs, Chip, LinearProgress, Tab,Box,Typography,Toolbar,Tooltip,TextField} from '@mui/material/';
 import {createTheme, ThemeProvider} from '@mui/material/styles';
 import AppBar from '@mui/material/AppBar';
 import SwipeableViews from 'react-swipeable-views-react-18-fix/lib/SwipeableViews';
@@ -12,8 +12,6 @@ import GoogleMapReact from 'google-map-react'
 import {debounce} from '@mui/material/utils'
 import LocationOnIcon  from '@mui/icons-material/LocationOn';
 import { styled, lighten, darken } from '@mui/system';
-
-const GOOGLE_MAPS_API_KEY = "AIzaSyBtMLLWnI3cvK-C2cX3e-6c795KhO__MjE"
 
 function loadScript(src,position,id)
 {
@@ -184,17 +182,26 @@ const themeOptions = {
 
 const App = () =>
 {
+  const [loadingDisplay, setLoadingDisplay] = React.useState('none')
+  const [map, setMap] = React.useState(null);
+  const [maps, setMaps] = React.useState(null);
+  const [defaultCenter,setDefaultCenter] = React.useState({
+    lat: 47.0902,
+    lng: -115.7129,
+  })
+  const [searchFocused,setSearchFocused] = React.useState(false)
   const [siteNames, setSiteNames] = React.useState([])
+  const [searchChoices, setSearchChoices] = React.useState([]);
   const [zoom,setZoom] = React.useState(10);
   const isLoaded = ({
     key:""
   })
   const [elements,setElements] = React.useState([
-    {title:"Location 1",state:"New York",icon:<LocationOnIcon/>,lat: 40.71, lng: -74},
-    {title:"Location 2",state: "Connecticut",icon:<LocationOnIcon/>,lat: 41.71, lng: -73},
-    {title:"Location 3",state:"Massachusetts",icon:<LocationOnIcon/>,lat: 42.71, lng: -72},
-    {title:"Location 4",state:"Virginia",icon:<LocationOnIcon/>,lat: 37.23,lng:-77.41},
-    {title:"Virginia State University",state:"Virginia",icon:<LocationOnIcon/>,lat:37.23,lng:-77.41},
+    {SiteName:"Location 1",State:"New York",icon:<LocationOnIcon/>,Latitude: 40.71, Longitude: -74},
+    {SiteName:"Location 2",State: "Connecticut",icon:<LocationOnIcon/>,Latitude: 41.71, Longitude: -73},
+    {SiteName:"Location 3",State:"Massachusetts",icon:<LocationOnIcon/>,Latitude: 42.71, Longitude: -72},
+    {SiteName:"Location 4",State:"Virginia",icon:<LocationOnIcon/>,Latitude: 37.23,Longitude:-77.41},
+    {SiteName:"Virginia State University",State:"Virginia",icon:<LocationOnIcon/>,Latitude:37.23,Longitude:-77.41},
   ])
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filteredElements, setFilteredElements] = React.useState([]);
@@ -213,9 +220,9 @@ const App = () =>
 
   React.useEffect(() => {
     const filtered = elements.filter((element) => {
-      const { title, state } = element;
+      const { SiteName, State } = element;
       const searchLower = searchTerm.toLowerCase();
-      return title.toLowerCase().includes(searchLower) || state.toLowerCase().includes(searchLower);
+      return SiteName.toLowerCase().includes(searchLower) || State.toLowerCase().includes(searchLower);
     });
     const grouped = groupElements(filtered);
     setFilteredElements(grouped);
@@ -225,36 +232,33 @@ const App = () =>
     fetch('./sites_by_state',{headers:{"Content-Type":"text/plain"}})
     .then(res=>res.json())
     .then(data=>setSiteNames(data["message"]))
-    console.log(siteNames)
   },[])
 
   const center = useMemo(() => ({lat: 40.71, lng: 74}), [])
-  const [map, setMap] = React.useState(null)
-  const onLoad = React.useCallback(function callback(map){
-    const bounds = new window.google.maps.LatLngBounds();
-    map.fitBounds(bounds);
-    setMap(map)
-  },[])
-  const handleApiLoaded = (map,maps) =>
-  {
-    const bounds = new maps.LatLngBounds();
-    elements.forEach(element =>
-      {
-        bounds.extend(new maps.LatLng(element.lat,element.lng));
-      });
-      map.fitBounds(bounds);
-      const newZoom = map.getZoom();
-      setZoom(newZoom);
-  }
-  const onUnmount = React.useCallback(function callback(map){
-    setMap(null)
-    },[])
   const handleChange = (event,newValue) =>{
     setTabValue(newValue);
   }
   const handleChangeIndex = (index) => {
     setTabValue(index);
   }
+  const handleKeyPress = (event) =>
+  {
+    setLoadingDisplay("block")
+    if(event.key==='Enter')
+    {
+      var searchChoices = JSON.parse(localStorage.getItem("searchChoices"))
+      fetch('./specific_sites',{method:"POST",body:JSON.stringify({sites:searchChoices}),headers:{"Content-Type":"text/plain"}}).then(res=>res.json()).then(data=>setElements(data))
+      //maps.setCenter(new window.google.maps.LatLng(defaultCenter.lat,defaultCenter.lng))
+    }
+    setLoadingDisplay("none")
+  }
+  const handleApiLoaded = (map, maps) => {
+    console.log("Accessed")
+    console.log(map)
+    console.log(maps)
+    setMap(map);
+    setMaps(maps);
+  };
   const theme = createTheme(themeOptions);
   const AboutPage = () =>
   {
@@ -270,16 +274,18 @@ const App = () =>
   const SearchPage = () =>
   {
     //37.238913059751326, -77.4198935057797
-    const location = {
-      lat: 37.238913059751326,
-      lng: -77.4198935057797,
-    }
     return(
       <div style={{height:'85vh',width:'100%'}}>
         <div p={5}>
+          <LinearProgress sx={{display:loadingDisplay}} color="primary"/>
           <Autocomplete
           multiple
           sx={{input:{color:'white'}}}
+          onChange={(event,newValue)=>
+            {
+              var searchChoices= localStorage.setItem("searchChoices",JSON.stringify(newValue))
+            }}
+          onKeyDown={handleKeyPress}
           id="grouped-demo"
           variant="contained"
           options={siteNames.sort((a,b)=>-b.State.localeCompare(a.State))}
@@ -300,11 +306,11 @@ const App = () =>
           />
         </div>
         <br></br>
-          <GoogleMapReact bootstrapURLKeys={isLoaded} defaultCenter={location} defaultZoom={15} yesIWantToUseGoogleMapApiInternals onGoogleApiLoaded={({map,maps})=>handleApiLoaded(map,maps)} >
+          <GoogleMapReact bootstrapURLKeys={isLoaded} defaultCenter={defaultCenter} defaultZoom={2} center={defaultCenter} yesIWantToUseGoogleMapApiInternalsonGoogleApiLoaded={({ map, maps }) => handleApiLoaded(map, maps)} >
             {elements.map((element,index)=>
             {
               return(
-                <Tooltip lat={element.lat} lng={element.lng} title = {element.title} placement="top">
+                <Tooltip lat={element.Latitude} lng={element.Longitude} title = {element.SiteName} placement="top">
                   <LocationOnIcon key={index}/>
                 </Tooltip>
               )
@@ -331,7 +337,7 @@ const App = () =>
         <AppBar position="static">
           <Toolbar>
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              App logo would go here
+              Emissiowl
             </Typography>
           </Toolbar>
         </AppBar>

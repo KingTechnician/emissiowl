@@ -20,6 +20,17 @@ async function queryState(db,state)
     return data;
 }
 
+async function querySitesAndStates(db,sites)
+{
+    var siteCommands = sites.map((site,index)=>{return `("State" = '${sites[index].State}' AND "SiteName" = '${sites[index].SiteName}')`})
+    var commandSuffix = siteCommands.join(' OR ')
+    let result = db.any(`SELECT * from pollutionsite WHERE ${commandSuffix}`)
+    let data = await result.then(data=>data)
+    data = JSON.stringify(data)
+    data=  JSON.parse(data)
+    return data;
+}
+
 async function getCities(db)
 {
     let result = db.any('SELECT DISTINCT "City" FROM pollutionsite')
@@ -93,4 +104,4 @@ async function responseDetails(message)
     }
 }
 
-module.exports = {sitesByState,getStates,getCities,getSiteNames,queryCity,querySiteName,queryState,queryCityAndState,requestHeaders,responseDetails}
+module.exports = {sitesByState,querySitesAndStates,getStates,getCities,getSiteNames,queryCity,querySiteName,queryState,queryCityAndState,requestHeaders,responseDetails}
