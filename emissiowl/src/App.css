@@ -13,6 +13,17 @@
   }
 }
 
+.emissiowlLanding{
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.678), #022a25) ,url('./backgroundImage.jpg');
+  min-height: 100vh;
+  min-width:100vw;
+  background-size:cover;
+  display:flex;
+  flex-direction:column;
+  font-size:calc(10px+2vmin);
+  color:white;
+}
+
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
